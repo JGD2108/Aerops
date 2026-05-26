@@ -41,3 +41,11 @@ def get_passenger_impact_summary() -> Dict[str, Any]:
 
 def get_audit_runs(limit: int = 20) -> Dict[str, Any]:
     return _get("/audit/runs", params={"limit": limit})
+
+
+def get_latest_metrics_snapshot() -> Dict[str, Any]:
+    return _get("/ops/metrics-snapshots/latest")
+
+
+def get_metrics_snapshots(limit: int = 20) -> Dict[str, Any]:
+    return _get("/ops/metrics-snapshots", params={"limit": limit})

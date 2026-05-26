@@ -24,6 +24,10 @@ def create_indexes():
     # audit_runs indexes
     db.audit_runs.create_index([("started_at", DESCENDING)])
 
+    # ops_metrics_snapshots indexes
+    db.ops_metrics_snapshots.create_index([("created_at", DESCENDING)])
+    db.ops_metrics_snapshots.create_index([("snapshot_id", ASCENDING)], unique=True)
+
     finished_at = datetime.utcnow()
 
     db.audit_runs.insert_one({
@@ -52,6 +56,10 @@ def create_indexes():
 
     print("\nAudit runs indexes:")
     for index in db.audit_runs.list_indexes():
+        print(index)
+
+    print("\nOps metrics snapshots indexes:")
+    for index in db.ops_metrics_snapshots.list_indexes():
         print(index)
 
 

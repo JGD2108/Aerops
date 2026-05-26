@@ -27,6 +27,15 @@ streamlit run dashboard/app.py
 Open:
 - `http://localhost:8501`
 
+## Dashboard Modes
+- `Live`: reads `/ops/delay-summary`, `/ops/top-delayed-routes`, `/ops/cancellations-by-airport`, and `/ops/passenger-impact-summary`.
+- `Snapshot`: reads `/ops/metrics-snapshots/latest` plus `/ops/metrics-snapshots` for history.
+
+Snapshot mode requires at least one materialized snapshot:
+```powershell
+python -m scripts.build_analytics_snapshots
+```
+
 ## Docker Compose
 ```powershell
 docker compose up --build

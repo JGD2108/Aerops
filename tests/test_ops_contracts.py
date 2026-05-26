@@ -113,6 +113,50 @@ class TestOpsContracts(unittest.TestCase):
         self.assertTrue(expected_keys.issubset(set(payload.keys())))
         self.assertIsInstance(payload["top_impacted_flights"], list)
 
+    @patch("app.routes.ops.get_latest_metrics_snapshot")
+    def test_latest_metrics_snapshot_contract(self, mock_repo):
+        mock_repo.return_value = {
+            "_id": "abc123",
+            "snapshot_id": "snapshot_20260526_001",
+            "created_at": "2026-05-26T00:00:00",
+            "source": "mongodb_operational_collections",
+            "metrics": {
+                "total_flights": 10000,
+                "delayed_flights": 1466,
+            },
+            "top_delayed_routes": [],
+            "cancellations_by_airport": [],
+            "passenger_impact_summary": {},
+        }
+
+        response = client.get("/ops/metrics-snapshots/latest")
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertIn("result", payload)
+        self.assertIsInstance(payload["result"], dict)
+        self.assertIn("snapshot_id", payload["result"])
+        self.assertIn("metrics", payload["result"])
+
+    @patch("app.routes.ops.get_metrics_snapshots")
+    def test_metrics_snapshots_contract(self, mock_repo):
+        mock_repo.return_value = [
+            {
+                "_id": "abc123",
+                "snapshot_id": "snapshot_20260526_001",
+                "created_at": "2026-05-26T00:00:00",
+                "source": "mongodb_operational_collections",
+            }
+        ]
+
+        response = client.get("/ops/metrics-snapshots?limit=10")
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertIn("limit", payload)
+        self.assertIn("results", payload)
+        self.assertIsInstance(payload["results"], list)
+        self.assertGreaterEqual(len(payload["results"]), 1)
+        self.assertIn("snapshot_id", payload["results"][0])
+
 
 if __name__ == "__main__":
     unittest.main()

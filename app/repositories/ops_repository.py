@@ -1,6 +1,18 @@
 from app.database import db
 
 
+def _serialize_snapshot(document):
+    if not document:
+        return None
+
+    document["_id"] = str(document["_id"])
+
+    if "created_at" in document and hasattr(document["created_at"], "isoformat"):
+        document["created_at"] = document["created_at"].isoformat()
+
+    return document
+
+
 def get_delay_summary():
     pipeline = [
         {
@@ -210,3 +222,13 @@ def get_passenger_impact_summary():
         "connection_risk_count": connection_risk_count,
         "top_impacted_flights": top_impacted_flights,
     }
+
+
+def get_latest_metrics_snapshot():
+    document = db.ops_metrics_snapshots.find_one({}, sort=[("created_at", -1)])
+    return _serialize_snapshot(document)
+
+
+def get_metrics_snapshots(limit: int = 20):
+    cursor = db.ops_metrics_snapshots.find({}).sort("created_at", -1).limit(limit)
+    return [_serialize_snapshot(document) for document in cursor]

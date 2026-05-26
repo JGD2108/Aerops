@@ -6,6 +6,8 @@ from api_client import (
     get_audit_runs,
     get_cancellations_by_airport,
     get_delay_summary,
+    get_latest_metrics_snapshot,
+    get_metrics_snapshots,
     get_passenger_impact_summary,
     get_top_delayed_routes,
 )
@@ -74,6 +76,11 @@ def metric_value(value, suffix: str = "") -> str:
 
 with st.sidebar:
     st.header("Controls")
+    data_mode = st.radio(
+        "Data mode",
+        options=["Live", "Snapshot"],
+        horizontal=True,
+    )
     route_limit = st.slider("Routes shown", min_value=5, max_value=50, value=15, step=5)
     route_min_flights = st.slider(
         "Route minimum flights",
@@ -102,17 +109,50 @@ st.markdown(
 
 
 try:
-    delay_summary = get_delay_summary()
-    route_payload = get_top_delayed_routes(
-        limit=route_limit,
-        min_flights=route_min_flights,
-    )
-    airport_payload = get_cancellations_by_airport(
-        limit=airport_limit,
-        min_flights=airport_min_flights,
-    )
-    impact_summary = get_passenger_impact_summary()
     audit_payload = get_audit_runs(limit=20)
+
+    if data_mode == "Live":
+        delay_summary = get_delay_summary()
+        route_payload = get_top_delayed_routes(
+            limit=route_limit,
+            min_flights=route_min_flights,
+        )
+        airport_payload = get_cancellations_by_airport(
+            limit=airport_limit,
+            min_flights=airport_min_flights,
+        )
+        impact_summary = get_passenger_impact_summary()
+        snapshot_meta = None
+        snapshots_payload = None
+    else:
+        latest_snapshot_payload = get_latest_metrics_snapshot()
+        snapshot_document = latest_snapshot_payload.get("result")
+
+        if not snapshot_document:
+            st.warning("No snapshot found. Run `python -m scripts.build_analytics_snapshots` and reload.")
+            st.stop()
+
+        snapshot_meta = {
+            "snapshot_id": snapshot_document.get("snapshot_id"),
+            "created_at": snapshot_document.get("created_at"),
+        }
+        snapshots_payload = get_metrics_snapshots(limit=20)
+
+        delay_summary = {
+            "total_flights": snapshot_document.get("metrics", {}).get("total_flights", 0),
+            "delayed_flights": snapshot_document.get("metrics", {}).get("delayed_flights", 0),
+            "cancelled_flights": snapshot_document.get("metrics", {}).get("cancelled_flights", 0),
+            "average_departure_delay": snapshot_document.get("metrics", {}).get("average_departure_delay", 0),
+            "average_arrival_delay": snapshot_document.get("metrics", {}).get("average_arrival_delay", 0),
+            "max_departure_delay": snapshot_document.get("metrics", {}).get("max_departure_delay", 0),
+        }
+        route_payload = {
+            "results": snapshot_document.get("top_delayed_routes", [])[:route_limit]
+        }
+        airport_payload = {
+            "results": snapshot_document.get("cancellations_by_airport", [])[:airport_limit]
+        }
+        impact_summary = snapshot_document.get("passenger_impact_summary", {})
 except Exception as exc:
     st.error(f"Dashboard data load failed: {exc}")
     st.stop()
@@ -139,6 +179,11 @@ kpi_6.metric(
     "Avg dep delay",
     metric_value(delay_summary.get("average_departure_delay", 0), " min"),
 )
+
+if data_mode == "Snapshot" and snapshot_meta:
+    st.caption(
+        f"Snapshot source: {snapshot_meta.get('snapshot_id')} | Created at: {snapshot_meta.get('created_at')}"
+    )
 
 
 tab_ops, tab_routes, tab_airports, tab_passengers, tab_audit = st.tabs(
@@ -268,3 +313,20 @@ with tab_audit:
             use_container_width=True,
             hide_index=True,
         )
+
+    if data_mode == "Snapshot":
+        st.subheader("Snapshot history")
+        snapshots_df = as_df((snapshots_payload or {}).get("results", []))
+        if snapshots_df.empty:
+            st.info("No snapshots available.")
+        else:
+            snapshot_columns = [
+                column
+                for column in ["snapshot_id", "created_at", "source"]
+                if column in snapshots_df.columns
+            ]
+            st.dataframe(
+                snapshots_df[snapshot_columns],
+                use_container_width=True,
+                hide_index=True,
+            )

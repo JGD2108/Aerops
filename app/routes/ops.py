@@ -3,6 +3,8 @@ from fastapi import APIRouter, Query
 from app.repositories.ops_repository import (
     get_cancellations_by_airport,
     get_delay_summary,
+    get_latest_metrics_snapshot,
+    get_metrics_snapshots,
     get_passenger_impact_summary,
     get_top_delayed_routes,
 )
@@ -35,3 +37,17 @@ def read_cancellations_by_airport(
 @router.get("/passenger-impact-summary")
 def read_passenger_impact_summary():
     return get_passenger_impact_summary()
+
+
+@router.get("/metrics-snapshots/latest")
+def read_latest_metrics_snapshot():
+    snapshot = get_latest_metrics_snapshot()
+    return {"result": snapshot}
+
+
+@router.get("/metrics-snapshots")
+def read_metrics_snapshots(limit: int = Query(default=20, ge=1, le=200)):
+    return {
+        "limit": limit,
+        "results": get_metrics_snapshots(limit=limit),
+    }

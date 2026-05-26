@@ -204,6 +204,8 @@ GET /ops/delay-summary
 GET /ops/top-delayed-routes
 GET /ops/cancellations-by-airport
 GET /ops/passenger-impact-summary
+GET /ops/metrics-snapshots/latest
+GET /ops/metrics-snapshots
 ```
 
 ### Audit
@@ -306,6 +308,12 @@ Generate derived flight events and synthetic passenger itineraries:
 ```powershell
 python -m scripts.generate_events
 python -m scripts.generate_passengers
+```
+
+Build analytics snapshots:
+
+```powershell
+python -m scripts.build_analytics_snapshots
 ```
 
 ## Kubernetes Deployment
