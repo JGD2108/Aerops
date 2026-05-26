@@ -30,4 +30,5 @@ def load_airports():
         "errors": []
     })
 
-load_airports()
+if __name__ == "__main__":
+    load_airports()

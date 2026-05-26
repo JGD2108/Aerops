@@ -214,6 +214,12 @@ GET /ops/metrics-snapshots
 GET /audit/runs
 ```
 
+### Pipeline Trigger
+
+```http
+POST /pipeline/run
+```
+
 ## Dashboard
 
 The project includes a Streamlit Operational Control Tower dashboard under:
@@ -314,6 +320,25 @@ Build analytics snapshots:
 
 ```powershell
 python -m scripts.build_analytics_snapshots
+```
+
+Run the full pipeline in one auditable command:
+
+```powershell
+python -m scripts.run_pipeline
+```
+
+Cloud automation design:
+
+```text
+docs/cloud_pipeline_automation.md
+```
+
+Optional trigger configuration:
+
+```text
+AZURE_PIPELINE_TRIGGER_URL
+AZURE_PIPELINE_TRIGGER_TOKEN
 ```
 
 ## Kubernetes Deployment

@@ -35,11 +35,7 @@ def normalize_time(value):
     except ValueError:
         return None
     
-
-
-
-if __name__ == "__main__":
-    # Example usage
+def process_raw_data():
     airports_file = "./data/raw/airports.csv"
     airport_df = read_raw_data(airports_file)
     
@@ -128,9 +124,17 @@ if __name__ == "__main__":
             ]
         ]
     
-    #save both df in files in processed folder
+    if airport_df is None:
+        raise FileNotFoundError(f"Required raw file not found or unreadable: {airports_file}")
+
+    if flights_df is None:
+        raise FileNotFoundError(f"Required raw file not found or unreadable: {flights_file}")
+
+    # save both dataframes in processed folder
     airport_df.to_csv("./data/processed/airports_processed.csv", index=False)
     flights_df.to_csv("./data/processed/flights_processed.csv", index=False)
-        
-        
-    
+    print("Processed raw datasets successfully")
+
+
+if __name__ == "__main__":
+    process_raw_data()

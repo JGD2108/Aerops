@@ -11,11 +11,13 @@ from app.config import config
 from app.routes.flights import router as flights_router
 from app.routes.ops import router as ops_router
 from app.routes.audit import router as audit_router
+from app.routes.pipeline import router as pipeline_router
 
 app = FastAPI(title=config.app_name)
 app.include_router(flights_router)
 app.include_router(ops_router)
 app.include_router(audit_router)
+app.include_router(pipeline_router)
 
 @app.get("/health")
 def health():
