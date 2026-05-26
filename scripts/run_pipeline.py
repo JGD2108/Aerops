@@ -1,7 +1,9 @@
 from datetime import datetime
+import time
 import traceback
 
 from app.database import db
+from pymongo.errors import OperationFailure, WriteError
 from scripts.build_analytics_snapshots import build_analytics_snapshots
 from scripts.create_indexes import create_indexes
 from scripts.generate_events import generate_events
@@ -20,6 +22,19 @@ PIPELINE_STEPS = [
     ("generate_passengers", generate_passengers),
     ("build_analytics_snapshots", build_analytics_snapshots),
 ]
+
+
+def _insert_audit_with_retry(document, max_retries=8):
+    attempt = 0
+    while True:
+        try:
+            db.audit_runs.insert_one(document)
+            return
+        except (WriteError, OperationFailure) as exc:
+            if getattr(exc, "code", None) != 16500 or attempt >= max_retries:
+                raise
+            time.sleep(min(2**attempt, 30))
+            attempt += 1
 
 
 def run_pipeline():
@@ -56,7 +71,7 @@ def run_pipeline():
     status = "FAILED" if failed else "SUCCESS"
     errors = [step["error"] for step in steps if step["error"]]
 
-    db.audit_runs.insert_one({
+    _insert_audit_with_retry({
         "process_name": "run_pipeline",
         "status": status,
         "started_at": started_at,
