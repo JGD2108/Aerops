@@ -1,4 +1,5 @@
 from app.database import db
+from pymongo.errors import OperationFailure
 
 
 def serialize_document(document):
@@ -17,11 +18,19 @@ def serialize_document(document):
 
 
 def get_audit_runs(limit: int = 20):
-    cursor = (
-        db.audit_runs
-        .find({})
-        .sort("started_at", -1)
-        .limit(limit)
-    )
-
-    return [serialize_document(document) for document in cursor]
+    try:
+        cursor = (
+            db.audit_runs
+            .find({})
+            .sort("started_at", -1)
+            .limit(limit)
+        )
+        return [serialize_document(document) for document in cursor]
+    except OperationFailure:
+        cursor = (
+            db.audit_runs
+            .find({})
+            .sort("_id", -1)
+            .limit(limit)
+        )
+        return [serialize_document(document) for document in cursor]
