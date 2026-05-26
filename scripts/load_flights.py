@@ -47,7 +47,12 @@ def load_flights():
     csv_text = storage_client.read_text("processed", "flights_processed.csv")
     reader = csv.DictReader(StringIO(csv_text))
     flights = []
+    seen_flight_ids = set()
     for row in reader:
+        flight_id = row.get("flight_id")
+        if flight_id in seen_flight_ids:
+            continue
+        seen_flight_ids.add(flight_id)
         row['departure_delay_minutes'] = float(row['departure_delay_minutes'])
         row['arrival_delay_minutes'] = float(row['arrival_delay_minutes'])
         row['distance'] = float(row['distance'])
