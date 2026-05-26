@@ -7,7 +7,9 @@ from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure
 
 uri = config.MONGODB_URI
-client = MongoClient(uri)
+# Cosmos DB for MongoDB does not support retryable writes. Keep this disabled
+# globally so the same code works for local MongoDB and cloud Cosmos Mongo.
+client = MongoClient(uri, retryWrites=False)
 
 db = client[config.MONGODB_DB_NAME]
 
