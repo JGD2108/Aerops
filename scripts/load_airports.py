@@ -5,7 +5,7 @@ from io import StringIO
 
 from app.database import db
 from app.storage_client import get_storage_client
-from pymongo.errors import BulkWriteError, OperationFailure
+from pymongo.errors import BulkWriteError, OperationFailure, WriteError
 
 
 def _insert_in_batches_with_retry(collection, documents, batch_size=50, max_retries=8):
@@ -30,6 +30,11 @@ def _insert_in_batches_with_retry(collection, documents, batch_size=50, max_retr
                     raise
                 time.sleep(min(2**attempt, 30))
                 attempt += 1
+            except WriteError as exc:
+                if exc.code != 16500 or attempt >= max_retries:
+                    raise
+                time.sleep(min(2**attempt, 30))
+                attempt += 1
 
 def load_airports():
     start_time = datetime.utcnow()
@@ -43,7 +48,7 @@ def load_airports():
         row['latitude'] = float(row['latitude'])
         row['longitude'] = float(row['longitude'])
         airports.append(row)
-    _insert_in_batches_with_retry(db.airports, airports, batch_size=25)
+    _insert_in_batches_with_retry(db.airports, airports, batch_size=5)
     end_time = datetime.utcnow()
     print(f"Inserted {len(airports)} airports")
     print(f"Loaded airports in {end_time - start_time}")
