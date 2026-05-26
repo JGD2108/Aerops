@@ -22,13 +22,13 @@ This project demonstrates:
 - Auditability through `audit_runs`.
 - Dockerized local execution.
 - Kubernetes deployment with liveness and readiness probes.
-- Azure-ready architecture using Azure Container Registry, AKS, and Cosmos DB for MongoDB.
+- Azure cloud-native architecture using Azure Container Apps, Container Apps Jobs, Cosmos DB for MongoDB, and Azure Blob Storage.
 
 ## Architecture
 
 The platform is organized in two layers:
 
-* Operational layer: FastAPI + MongoDB + Kubernetes-ready API patterns.
+* Operational layer: FastAPI + MongoDB/Cosmos + Container Apps-ready API patterns.
 * Analytics layer: aggregation endpoints + Streamlit operational dashboard.
 
 ```text
@@ -50,7 +50,7 @@ Docker image
 	↓
 Docker Compose / Kubernetes
 	↓
-Azure-ready path: ACR + AKS + Cosmos DB for MongoDB
+Azure cloud path: ACR + Container Apps + Container Apps Jobs + Cosmos DB for MongoDB
 ```
 
 ## Data Sources
@@ -332,6 +332,7 @@ Cloud automation design:
 
 ```text
 docs/cloud_pipeline_automation.md
+docs/cloud_native_deployment_aca.md
 ```
 
 Optional trigger configuration:
@@ -400,11 +401,13 @@ http://localhost:8001/docs
 
 The project is Azure-ready.
 
-Target Azure services:
+Primary production target:
 
 * Azure Cosmos DB for MongoDB
 * Azure Container Registry
-* Azure Kubernetes Service
+* Azure Container Apps (API + dashboard)
+* Azure Container Apps Jobs (pipeline)
+* Azure Blob Storage
 
 Azure Container Registry was validated successfully:
 
@@ -413,7 +416,21 @@ Repository: aeroops-api
 Tag: latest
 ```
 
-AKS and Cosmos DB are documented as the target deployment path. The local MVP does not depend on Azure resources being fully deployed.
+ACA/Cosmos/Blob are the target production path. The local MVP does not depend on Azure resources being fully deployed.
+
+### Live Azure Endpoints (Deployed May 26, 2026)
+
+Dashboard:
+
+```text
+https://aeroops-dashboard.whitebay-77f3e4c1.eastus2.azurecontainerapps.io
+```
+
+API base:
+
+```text
+https://aeroops-api.whitebay-77f3e4c1.eastus2.azurecontainerapps.io
+```
 
 ### Current Azure Automation Status
 

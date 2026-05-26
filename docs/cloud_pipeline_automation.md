@@ -6,7 +6,7 @@ This document defines the cloud-native automation path for AeroOps pipeline exec
 
 Automate ingestion and transformation jobs without running long processes inside the FastAPI web service.
 
-## Current Orchestration (MVP)
+## Current Orchestration
 
 The project now has a single orchestration entrypoint:
 
@@ -24,20 +24,21 @@ python -m scripts.run_pipeline
 6. `generate_passengers`
 7. `build_analytics_snapshots`
 
-The pipeline writes a consolidated `audit_runs` record with:
+The pipeline is incremental-first and writes a consolidated `audit_runs` record with:
 
 - `process_name = run_pipeline`
 - step-level status and duration
 - overall pipeline status (`SUCCESS` / `FAILED`)
+- Cosmos throttling retries on write/delete/update/index paths
 
-## Recommended Azure Automation Architecture
+## Recommended Azure Automation Architecture (Prod)
 
 ```text
 BTS / OurAirports source files
         ↓
 Azure Blob Storage (raw / processed)
         ↓
-Azure Container Apps Job (scheduled or manual)
+Azure Container Apps Job (scheduled/manual, single active execution)
         ↓
 python -m scripts.run_pipeline
         ↓
@@ -72,14 +73,18 @@ Current API support:
 
 - `Azure Blob Storage`: source and processed files.
 - `Azure Container Apps Jobs`: scheduled/manual batch execution.
+- `Azure Container Apps`: API and dashboard runtime.
 - `Azure Cosmos DB for MongoDB`: operational and analytics collections.
 - `Azure Container Registry`: image hosting and promotion.
+- `Log Analytics + Application Insights`: logs, traces, alerts.
 
-## Next Increment
+## Deployment Contract
 
-1. `storage_client` abstraction is now implemented (`local` / `azure_blob`) and used by ingestion scripts.
-2. `POST /pipeline/run` trigger endpoint is now implemented (job dispatch only).
-3. Add scheduling configuration docs for Container Apps Jobs.
+See:
+
+```text
+docs/cloud_native_deployment_aca.md
+```
 
 ## Phase 19 Execution (Completed)
 

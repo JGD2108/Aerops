@@ -3,6 +3,7 @@ from datetime import datetime
 from pymongo import ASCENDING, DESCENDING
 
 from app.database import db
+from scripts.cosmos_retry import run_with_cosmos_retry
 
 
 def _remove_duplicates_by_field(collection, field_name):
@@ -11,13 +12,13 @@ def _remove_duplicates_by_field(collection, field_name):
         {"$group": {"_id": f"${field_name}", "ids": {"$push": "$_id"}, "count": {"$sum": 1}}},
         {"$match": {"count": {"$gt": 1}}},
     ]
-    duplicates = list(collection.aggregate(pipeline, allowDiskUse=True))
+    duplicates = run_with_cosmos_retry(lambda: list(collection.aggregate(pipeline, allowDiskUse=True)))
     removed = 0
     for doc in duplicates:
         ids = doc.get("ids", [])
         if len(ids) > 1:
             delete_ids = ids[1:]
-            result = collection.delete_many({"_id": {"$in": delete_ids}})
+            result = run_with_cosmos_retry(lambda: collection.delete_many({"_id": {"$in": delete_ids}}))
             removed += result.deleted_count
     return removed
 
@@ -30,28 +31,28 @@ def create_indexes():
     _remove_duplicates_by_field(db.ops_metrics_snapshots, "snapshot_id")
 
     # flights indexes
-    db.flights.create_index([("flight_id", ASCENDING)], unique=True)
-    db.flights.create_index([("origin", ASCENDING), ("flight_date", ASCENDING)])
-    db.flights.create_index([("destination", ASCENDING), ("flight_date", ASCENDING)])
-    db.flights.create_index([("status", ASCENDING), ("flight_date", ASCENDING)])
-    db.flights.create_index([("departure_delay_minutes", DESCENDING)])
+    run_with_cosmos_retry(lambda: db.flights.create_index([("flight_id", ASCENDING)], unique=True))
+    run_with_cosmos_retry(lambda: db.flights.create_index([("origin", ASCENDING), ("flight_date", ASCENDING)]))
+    run_with_cosmos_retry(lambda: db.flights.create_index([("destination", ASCENDING), ("flight_date", ASCENDING)]))
+    run_with_cosmos_retry(lambda: db.flights.create_index([("status", ASCENDING), ("flight_date", ASCENDING)]))
+    run_with_cosmos_retry(lambda: db.flights.create_index([("departure_delay_minutes", DESCENDING)]))
 
     # flight_events indexes
-    db.flight_events.create_index([("flight_id", ASCENDING), ("timestamp", DESCENDING)])
+    run_with_cosmos_retry(lambda: db.flight_events.create_index([("flight_id", ASCENDING), ("timestamp", DESCENDING)]))
 
     # passenger_itineraries indexes
-    db.passenger_itineraries.create_index([("flights", ASCENDING)])
+    run_with_cosmos_retry(lambda: db.passenger_itineraries.create_index([("flights", ASCENDING)]))
 
     # audit_runs indexes
-    db.audit_runs.create_index([("started_at", DESCENDING)])
+    run_with_cosmos_retry(lambda: db.audit_runs.create_index([("started_at", DESCENDING)]))
 
     # ops_metrics_snapshots indexes
-    db.ops_metrics_snapshots.create_index([("created_at", DESCENDING)])
-    db.ops_metrics_snapshots.create_index([("snapshot_id", ASCENDING)], unique=True)
+    run_with_cosmos_retry(lambda: db.ops_metrics_snapshots.create_index([("created_at", DESCENDING)]))
+    run_with_cosmos_retry(lambda: db.ops_metrics_snapshots.create_index([("snapshot_id", ASCENDING)], unique=True))
 
     finished_at = datetime.utcnow()
 
-    db.audit_runs.insert_one({
+    run_with_cosmos_retry(lambda: db.audit_runs.insert_one({
         "process_name": "create_indexes",
         "status": "SUCCESS",
         "started_at": started_at,
@@ -59,7 +60,7 @@ def create_indexes():
         "records_processed": 0,
         "records_inserted": 0,
         "errors": []
-    })
+    }))
 
     print("Indexes created successfully")
 

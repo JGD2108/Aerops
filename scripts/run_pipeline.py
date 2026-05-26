@@ -1,10 +1,10 @@
 from datetime import datetime
-import time
+import os
 import traceback
 
 from app.database import db
-from pymongo.errors import OperationFailure, WriteError
 from scripts.build_analytics_snapshots import build_analytics_snapshots
+from scripts.cosmos_retry import run_with_cosmos_retry
 from scripts.create_indexes import create_indexes
 from scripts.generate_events import generate_events
 from scripts.generate_passengers import generate_passengers
@@ -24,20 +24,25 @@ PIPELINE_STEPS = [
 ]
 
 
-def _insert_audit_with_retry(document, max_retries=8):
-    attempt = 0
-    while True:
-        try:
-            db.audit_runs.insert_one(document)
-            return
-        except (WriteError, OperationFailure) as exc:
-            if getattr(exc, "code", None) != 16500 or attempt >= max_retries:
-                raise
-            time.sleep(min(2**attempt, 30))
-            attempt += 1
+def _validate_pipeline_env():
+    missing = []
+    for name in ("MONGODB_URI",):
+        if not os.getenv(name):
+            missing.append(name)
+
+    if not (os.getenv("MONGODB_DATABASE") or os.getenv("MONGODB_DB_NAME")):
+        missing.append("MONGODB_DATABASE (or MONGODB_DB_NAME)")
+
+    backend = os.getenv("STORAGE_BACKEND", "local").strip().lower()
+    if backend == "azure_blob" and not os.getenv("AZURE_STORAGE_CONNECTION_STRING"):
+        missing.append("AZURE_STORAGE_CONNECTION_STRING")
+
+    if missing:
+        raise ValueError(f"Missing required pipeline environment variables: {', '.join(missing)}")
 
 
 def run_pipeline():
+    _validate_pipeline_env()
     started_at = datetime.utcnow()
     steps = []
     failed = False
@@ -71,7 +76,7 @@ def run_pipeline():
     status = "FAILED" if failed else "SUCCESS"
     errors = [step["error"] for step in steps if step["error"]]
 
-    _insert_audit_with_retry({
+    run_with_cosmos_retry(lambda: db.audit_runs.insert_one({
         "process_name": "run_pipeline",
         "status": status,
         "started_at": started_at,
@@ -80,7 +85,7 @@ def run_pipeline():
         "records_inserted": 0,
         "steps": steps,
         "errors": errors,
-    })
+    }))
 
     print(f"Pipeline finished with status: {status}")
     print(f"Total duration: {finished_at - started_at}")

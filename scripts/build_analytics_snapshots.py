@@ -1,12 +1,14 @@
 from datetime import datetime
 
 from app.database import db
+from pymongo.errors import DuplicateKeyError
 from app.repositories.ops_repository import (
     get_cancellations_by_airport,
     get_delay_summary,
     get_passenger_impact_summary,
     get_top_delayed_routes,
 )
+from scripts.cosmos_retry import run_with_cosmos_retry
 
 
 def _build_snapshot_id() -> str:
@@ -54,10 +56,16 @@ def build_analytics_snapshots():
         "passenger_impact_summary": passenger_impact_summary,
     }
 
-    db.ops_metrics_snapshots.insert_one(snapshot_document)
+    inserted = False
+    while not inserted:
+        try:
+            run_with_cosmos_retry(lambda: db.ops_metrics_snapshots.insert_one(snapshot_document))
+            inserted = True
+        except DuplicateKeyError:
+            snapshot_document["snapshot_id"] = _build_snapshot_id()
 
     finished_at = datetime.utcnow()
-    db.audit_runs.insert_one({
+    run_with_cosmos_retry(lambda: db.audit_runs.insert_one({
         "process_name": "build_analytics_snapshots",
         "status": "SUCCESS",
         "started_at": started_at,
@@ -65,7 +73,7 @@ def build_analytics_snapshots():
         "records_processed": total_flights,
         "records_inserted": 1,
         "errors": [],
-    })
+    }))
 
     print(f"Created snapshot: {snapshot_document['snapshot_id']}")
     print(f"Generated analytics snapshot in {finished_at - started_at}")
