@@ -26,6 +26,11 @@ This project demonstrates:
 
 ## Architecture
 
+The platform is organized in two layers:
+
+* Operational layer: FastAPI + MongoDB + Kubernetes-ready API patterns.
+* Analytics layer: aggregation endpoints + Streamlit operational dashboard.
+
 ```text
 BTS / OurAirports CSV datasets
 	↓
@@ -36,6 +41,10 @@ Processed operational records
 MongoDB collections
 	↓
 FastAPI operational API
+	↓
+Analytics aggregation endpoints
+	↓
+Streamlit operational dashboard
 	↓
 Docker image
 	↓
@@ -192,6 +201,9 @@ GET /flights/{flight_id}/impacted-passengers
 
 ```http
 GET /ops/delay-summary
+GET /ops/top-delayed-routes
+GET /ops/cancellations-by-airport
+GET /ops/passenger-impact-summary
 ```
 
 ### Audit
@@ -200,9 +212,31 @@ GET /ops/delay-summary
 GET /audit/runs
 ```
 
+## Dashboard
+
+The project includes a Streamlit Operational Control Tower dashboard under:
+
+```text
+dashboard/
+```
+
+Dashboard views:
+
+* Ops Summary: executive KPIs, delay rate, cancellation rate, and disruption posture.
+* Route Analysis: ranked delayed routes with configurable minimum-flight thresholds.
+* Airport Analysis: cancellation pressure by origin airport.
+* Passenger Impact: impacted itineraries, connection-risk count, and top impacted flights.
+* Audit Runs: recent ingestion, indexing, and generation jobs.
+
+Dashboard URL:
+
+```text
+http://localhost:8501
+```
+
 ## Local Setup with Docker Compose
 
-Build and run the API and MongoDB:
+Build and run MongoDB, API, and dashboard:
 
 ```powershell
 docker compose up --build
@@ -214,11 +248,41 @@ Open Swagger:
 http://localhost:8000/docs
 ```
 
+Open dashboard:
+
+```text
+http://localhost:8501
+```
+
 Health checks:
 
 ```text
 http://localhost:8000/health
 http://localhost:8000/ready
+```
+
+## Analytics Dashboard Demo Flow
+
+Recommended demo sequence:
+
+1. Open Swagger at `http://localhost:8000/docs` and show the `/ops` endpoint group.
+2. Open the dashboard at `http://localhost:8501`.
+3. Start with Ops Summary to explain total flights, delay rate, cancellation rate, and average delay.
+4. Move to Route Analysis and adjust the route minimum-flight threshold in the sidebar.
+5. Move to Airport Analysis and compare cancellation pressure by origin airport.
+6. Move to Passenger Impact and show impacted itineraries plus `connection_risk_count`.
+7. Finish with Audit Runs to show pipeline traceability.
+
+This flow demonstrates the full operational analytics path:
+
+```text
+MongoDB operational collections
+	↓
+FastAPI aggregation endpoints
+	↓
+Streamlit analytics dashboard
+	↓
+Operational monitoring story
 ```
 
 ## Data Processing and Loading
@@ -345,6 +409,24 @@ http://localhost:8000/flights/2025-01-01-AA-1784-ORD-CLT/impacted-passengers
 http://localhost:8000/ops/delay-summary
 ```
 
+### Top delayed routes
+
+```text
+http://localhost:8000/ops/top-delayed-routes?limit=5&min_flights=10
+```
+
+### Cancellations by airport
+
+```text
+http://localhost:8000/ops/cancellations-by-airport?limit=5&min_flights=50
+```
+
+### Passenger impact summary
+
+```text
+http://localhost:8000/ops/passenger-impact-summary
+```
+
 ### Audit runs
 
 ```text
@@ -357,11 +439,14 @@ Recommended screenshots:
 
 1. Swagger UI showing all endpoint groups.
 2. `/ops/delay-summary` response.
-3. `/flights/{flight_id}/events` response.
-4. `/flights/{flight_id}/impacted-passengers` response.
-5. Docker Compose logs.
-6. Kubernetes `kubectl get all -n aeroops`.
-7. Azure Container Registry repository showing `aeroops-api:latest`.
+3. `/ops/top-delayed-routes` response.
+4. `/ops/passenger-impact-summary` response.
+5. Streamlit dashboard overview (`localhost:8501`).
+6. Streamlit Route Analysis tab.
+7. Streamlit Passenger Impact tab.
+8. Docker Compose logs.
+9. Kubernetes `kubectl get all -n aeroops`.
+10. Azure Container Registry repository showing `aeroops-api:latest`.
 
 ## Future Improvements
 
@@ -370,7 +455,7 @@ Recommended screenshots:
 * Deploy Mongo-compatible storage through Azure Cosmos DB for MongoDB.
 * Deploy the API to AKS using the ACR image.
 * Add CI/CD with GitHub Actions.
-* Add more operational analytics endpoints.
-* Add route-level delay statistics.
-* Add richer passenger connection-risk simulation.
+* Add analytics snapshot collection (`ops_metrics_snapshots`).
+* Add airline-level operational summary.
+* Add richer passenger connection-risk simulation using realistic connection windows.
 * Add observability with structured logs and metrics.

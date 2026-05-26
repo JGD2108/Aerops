@@ -21,5 +21,17 @@ services:
     depends_on:
       - mongo
 
+  dashboard:
+    build:
+      context: .
+      dockerfile: dashboard/Dockerfile
+    container_name: aeroops-dashboard
+    ports:
+      - "8501:8501"
+    environment:
+      AEROOPS_API_BASE_URL: http://api:8000
+    depends_on:
+      - api
+
 volumes:
   aeroops_mongo_data:
