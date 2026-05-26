@@ -1,41 +1,45 @@
 
 import csv 
+import re
 import time
 from datetime import datetime
 from io import StringIO
 
 from app.database import db
 from app.storage_client import get_storage_client
-from pymongo.errors import BulkWriteError, OperationFailure, WriteError
+from pymongo.errors import DuplicateKeyError, OperationFailure, WriteError
 
 
-def _insert_in_batches_with_retry(collection, documents, batch_size=100, max_retries=8):
+def _retry_sleep_seconds(exc, attempt):
+    message = str(exc)
+    match = re.search(r"RetryAfterMs=(\d+)", message)
+    if match:
+        return max(int(match.group(1)) / 1000.0, 0.05)
+    return min(2**attempt, 30)
+
+
+def _insert_one_by_one_with_retry(collection, documents, max_retries=10):
     inserted = 0
-    for start in range(0, len(documents), batch_size):
-        batch = documents[start : start + batch_size]
+    for doc in documents:
         attempt = 0
         while True:
             try:
-                collection.insert_many(batch, ordered=False)
-                inserted += len(batch)
+                collection.insert_one(doc)
+                inserted += 1
                 break
-            except BulkWriteError as exc:
-                errors = exc.details.get("writeErrors", [])
-                is_throttled = bool(errors) and all(err.get("code") == 16500 for err in errors)
-                if not is_throttled or attempt >= max_retries:
-                    raise
-                time.sleep(min(2**attempt, 30))
-                attempt += 1
+            except DuplicateKeyError:
+                break
             except OperationFailure as exc:
                 if exc.code != 16500 or attempt >= max_retries:
                     raise
-                time.sleep(min(2**attempt, 30))
+                time.sleep(_retry_sleep_seconds(exc, attempt))
                 attempt += 1
             except WriteError as exc:
                 if exc.code != 16500 or attempt >= max_retries:
                     raise
-                time.sleep(min(2**attempt, 30))
+                time.sleep(_retry_sleep_seconds(exc, attempt))
                 attempt += 1
+    return inserted
 
 
 def to_bool(value):
@@ -61,9 +65,11 @@ def load_flights():
         
         flights.append(row)
     if flights:
-        _insert_in_batches_with_retry(db.flights, flights, batch_size=20)
+        inserted = _insert_one_by_one_with_retry(db.flights, flights)
+    else:
+        inserted = 0
     end_time = datetime.utcnow()
-    print(f"Inserted {len(flights)} flights")
+    print(f"Inserted {inserted} flights")
     print(f"Loaded flights in {end_time - start_time}")
     db.audit_runs.insert_one({
         "process_name": "load_flights",
@@ -71,7 +77,7 @@ def load_flights():
         "started_at": start_time,
         "finished_at": end_time,
         "records_processed": len(flights),
-        "records_inserted": len(flights),
+        "records_inserted": inserted,
         "errors": []
     })
     
