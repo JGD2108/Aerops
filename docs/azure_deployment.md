@@ -114,3 +114,34 @@ Orden más seguro:
 2. Cosmos DB notes -> documentar conexión MongoDB-compatible
 3. AKS -> solo si hay tiempo y cuota
 ```
+
+
+## AKS Deployment Path
+
+The local Kubernetes deployment provides the baseline for an AKS deployment.
+
+To deploy to AKS, the following changes would be required:
+
+1. Use the ACR image instead of the local Docker image.
+2. Replace `imagePullPolicy: Never` with `IfNotPresent` or remove it.
+3. Configure AKS permissions to pull from ACR.
+4. Replace the local MongoDB connection string with the Azure Cosmos DB for MongoDB connection string.
+5. Apply the Kubernetes manifests to the AKS cluster.
+6. Validate `/health`, `/ready`, and `/docs`.
+
+## Azure Validation Summary
+
+The Azure CLI was authenticated successfully using the Azure for Students subscription.
+
+The required providers were registered:
+
+- `Microsoft.ContainerRegistry`
+- `Microsoft.ContainerService`
+- `Microsoft.DocumentDB`
+
+Azure Container Registry was validated successfully:
+
+- Repository: `aeroops-api`
+- Tag: `latest`
+
+AKS and Cosmos DB were documented as the target deployment path, but they were not required to complete the MVP because the project already runs successfully with Docker Compose and local Kubernetes.
