@@ -1,0 +1,11 @@
+services:
+  mongo:
+    image: mongo:7
+    container_name: aeroops-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - aeroops_mongo_data:/data/db
+
+volumes:
+  aeroops_mongo_data:
