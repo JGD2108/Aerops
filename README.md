@@ -10,13 +10,7 @@ Detailed Spanish walkthrough (runbook + architecture rationale):
 docs/explicacion_proyecto.md
 ```
 
-## Business Context
-
-This project was built to align with a Data Engineer - Operational Data (NoSQL) opportunity in the aviation/travel technology sector.
-
-The role emphasizes distributed operational data systems, NoSQL databases, data model design, backend development, indexing strategies, cloud-native architecture, Kubernetes, and Azure.
-
-## Why This Project Matches the Role
+## Project Highlights
 
 This project demonstrates:
 
