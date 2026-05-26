@@ -33,9 +33,23 @@ def _insert_one_by_one_with_retry(collection, documents, max_retries=10):
                 attempt += 1
     return inserted
 
+
+def _delete_many_with_retry(collection, query, max_retries=10):
+    attempt = 0
+    while True:
+        try:
+            collection.delete_many(query)
+            return
+        except (WriteError, OperationFailure) as exc:
+            if getattr(exc, "code", None) != 16500 or attempt >= max_retries:
+                raise
+            time.sleep(_retry_sleep_seconds(exc, attempt))
+            attempt += 1
+
+
 def load_airports():
     start_time = datetime.utcnow()
-    db.airports.delete_many({})
+    _delete_many_with_retry(db.airports, {})
     storage_client = get_storage_client()
     # convert latitude and longitude in float 
     csv_text = storage_client.read_text("processed", "airports_processed.csv")
