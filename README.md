@@ -4,6 +4,12 @@ AeroOps NoSQL Control Tower is a cloud-native operational data platform for avia
 
 It models flights, operational flight events, airports, audit runs, and synthetic passenger itineraries using MongoDB-style NoSQL design. The API supports low-latency operational access patterns such as delayed flight lookup, event timelines, impacted passenger queries, delay summaries, and audit run review.
 
+Detailed Spanish walkthrough (runbook + architecture rationale):
+
+```text
+docs/explicacion_proyecto.md
+```
+
 ## Business Context
 
 This project was built to align with a Data Engineer - Operational Data (NoSQL) opportunity in the aviation/travel technology sector.
@@ -414,6 +420,23 @@ Tag: latest
 ```
 
 AKS and Cosmos DB are documented as the target deployment path. The local MVP does not depend on Azure resources being fully deployed.
+
+### Current Azure Automation Status
+
+Azure resources were provisioned for pipeline automation:
+
+* Azure Container Registry (`aeroopsacr1974`)
+* Azure Container Apps Environment (`aeroops-ca-env`)
+* Container Apps Jobs:
+  * `aeroops-pipeline-job` (manual)
+  * `aeroops-pipeline-job-sched` (cron `0 3 * * *`)
+* Azure Log Analytics Workspace (`aeroops-law`)
+* Azure Cosmos DB for MongoDB (`aeroops-cosmos-mongo`)
+
+Known cloud constraint at current state:
+
+* Full batch loads can still hit Cosmos RU throttling (`WriteError code 16500 / 429`) during heavy write phases (`load_airports` / `load_flights`) depending on throughput and runtime pressure.
+* Local Docker Compose remains the primary stable demo path.
 
 ## Demo Queries
 
