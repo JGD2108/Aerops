@@ -81,6 +81,35 @@ Current API support:
 2. `POST /pipeline/run` trigger endpoint is now implemented (job dispatch only).
 3. Add scheduling configuration docs for Container Apps Jobs.
 
+## Phase 19 Execution (Completed)
+
+The Azure scheduler baseline has been provisioned in subscription `aaa155cc-3eca-463e-ac45-20ab5528d131`:
+
+- Allowed regions discovered from policy `sys.regionrestriction`:
+  - `southcentralus`, `canadacentral`, `eastus2`, `mexicocentral`, `westus2`
+- Container Apps Environment:
+  - `aeroops-ca-env` in `eastus2`
+- ACR image used:
+  - `aeroopsacr1974.azurecr.io/aeroops-api:latest`
+- Jobs created:
+  - Manual: `aeroops-pipeline-job`
+  - Scheduled: `aeroops-pipeline-job-sched` with cron `0 3 * * *` (UTC)
+
+Validation commands:
+
+```powershell
+az containerapp job list --resource-group rg-aeroops-nosql --query "[].{name:name,trigger:properties.configuration.triggerType,cron:properties.configuration.scheduleTriggerConfig.cronExpression}" -o table
+az containerapp job start --name aeroops-pipeline-job --resource-group rg-aeroops-nosql
+az containerapp job execution list --name aeroops-pipeline-job --resource-group rg-aeroops-nosql
+```
+
+Current constraint:
+
+- The Azure job execution path still needs a cloud-reachable MongoDB endpoint (`Cosmos DB for MongoDB` or `MongoDB Atlas`).
+- A local URI such as `mongodb://localhost:27017` is not reachable from Container Apps.
+
+Until MongoDB is cloud-reachable, Azure executions can start but cannot complete end-to-end pipeline writes.
+
 ## Storage Abstraction Variables
 
 ```text
