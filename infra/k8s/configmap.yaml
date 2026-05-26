@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aeroops-api-config
+  namespace: aeroops
+data:
+  APP_NAME: "AeroOps NoSQL Control Tower"
+  MONGODB_DATABASE: "aeroops"

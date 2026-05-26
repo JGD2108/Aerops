@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aeroops-api
+  namespace: aeroops
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: aeroops-api
+  template:
+    metadata:
+      labels:
+        app: aeroops-api
+    spec:
+      containers:
+        - name: aeroops-api
+          image: aeroops-nosql-control-tower-api:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8000
+          env:
+            - name: APP_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: aeroops-api-config
+                  key: APP_NAME
+            - name: MONGODB_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  name: aeroops-api-config
+                  key: MONGODB_DATABASE
+            - name: MONGODB_URI
+              valueFrom:
+                secretKeyRef:
+                  name: aeroops-api-secret
+                  key: MONGODB_URI
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
