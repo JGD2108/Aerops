@@ -1,18 +1,22 @@
 import pandas as pd 
+from io import StringIO
 
-def read_raw_data(file_path):
+from app.storage_client import get_storage_client
+
+def read_raw_data(storage_client, key):
     """
     Reads raw data from a CSV file and returns a DataFrame.
     
     Parameters:
-    file_path (str): The path to the CSV file containing the raw data.
+    key (str): The CSV file key/path in the configured raw storage area.
     
     Returns:
     pd.DataFrame: A DataFrame containing the raw data.
     """
     try:
-        raw_data = pd.read_csv(file_path)
-        print(f"Successfully read raw data from {file_path}")
+        raw_text = storage_client.read_text("raw", key)
+        raw_data = pd.read_csv(StringIO(raw_text))
+        print(f"Successfully read raw data from raw/{key}")
         return raw_data
     except Exception as e:
         print(f"Error reading raw data: {e}")
@@ -36,8 +40,9 @@ def normalize_time(value):
         return None
     
 def process_raw_data():
-    airports_file = "./data/raw/airports.csv"
-    airport_df = read_raw_data(airports_file)
+    storage_client = get_storage_client()
+    airports_key = "airports.csv"
+    airport_df = read_raw_data(storage_client, airports_key)
     
     if airport_df is not None:
         #delete columns that have iata_code empty or null, because we will use iata_code as primary key to link with flights data
@@ -64,8 +69,8 @@ def process_raw_data():
         ]
         
     
-    flights_file = "./data/raw/flights.csv"
-    flights_df = read_raw_data(flights_file)
+    flights_key = "flights.csv"
+    flights_df = read_raw_data(storage_client, flights_key)
     if flights_df is not None:
         cols = [
             "FL_DATE",
@@ -125,14 +130,22 @@ def process_raw_data():
         ]
     
     if airport_df is None:
-        raise FileNotFoundError(f"Required raw file not found or unreadable: {airports_file}")
+        raise FileNotFoundError(f"Required raw file not found or unreadable: raw/{airports_key}")
 
     if flights_df is None:
-        raise FileNotFoundError(f"Required raw file not found or unreadable: {flights_file}")
+        raise FileNotFoundError(f"Required raw file not found or unreadable: raw/{flights_key}")
 
-    # save both dataframes in processed folder
-    airport_df.to_csv("./data/processed/airports_processed.csv", index=False)
-    flights_df.to_csv("./data/processed/flights_processed.csv", index=False)
+    # save both dataframes in processed storage
+    storage_client.write_text(
+        "processed",
+        "airports_processed.csv",
+        airport_df.to_csv(index=False),
+    )
+    storage_client.write_text(
+        "processed",
+        "flights_processed.csv",
+        flights_df.to_csv(index=False),
+    )
     print("Processed raw datasets successfully")
 
 

@@ -1,28 +1,29 @@
 
 import csv 
 from datetime import datetime
+from io import StringIO
 
 from app.database import db
-
-CSV_FILE = "./data/processed/flights_processed.csv"
+from app.storage_client import get_storage_client
 def to_bool(value):
     return str(value).lower() == "true"
 def load_flights():
     start_time = datetime.utcnow()
     db.flights.delete_many({})
-    with open(CSV_FILE, mode="r", encoding="utf-8") as file:
-        reader = csv.DictReader(file)
-        flights = []
-        for row in reader:
-            row['departure_delay_minutes'] = float(row['departure_delay_minutes'])
-            row['arrival_delay_minutes'] = float(row['arrival_delay_minutes'])
-            row['distance'] = float(row['distance'])
-            row['cancelled'] = to_bool(row['cancelled'])
-            row['diverted'] = to_bool(row['diverted'])
-            
-            flights.append(row)
-        if flights:
-            db.flights.insert_many(flights)
+    storage_client = get_storage_client()
+    csv_text = storage_client.read_text("processed", "flights_processed.csv")
+    reader = csv.DictReader(StringIO(csv_text))
+    flights = []
+    for row in reader:
+        row['departure_delay_minutes'] = float(row['departure_delay_minutes'])
+        row['arrival_delay_minutes'] = float(row['arrival_delay_minutes'])
+        row['distance'] = float(row['distance'])
+        row['cancelled'] = to_bool(row['cancelled'])
+        row['diverted'] = to_bool(row['diverted'])
+        
+        flights.append(row)
+    if flights:
+        db.flights.insert_many(flights)
     end_time = datetime.utcnow()
     print(f"Inserted {len(flights)} flights")
     print(f"Loaded flights in {end_time - start_time}")

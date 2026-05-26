@@ -77,6 +77,23 @@ Current API support:
 
 ## Next Increment
 
-1. Introduce `storage_client` abstraction (`local` / `azure_blob`).
-2. Add `POST /pipeline/run` trigger endpoint (job dispatch only).
+1. `storage_client` abstraction is now implemented (`local` / `azure_blob`) and used by ingestion scripts.
+2. `POST /pipeline/run` trigger endpoint is now implemented (job dispatch only).
 3. Add scheduling configuration docs for Container Apps Jobs.
+
+## Storage Abstraction Variables
+
+```text
+STORAGE_BACKEND=local|azure_blob
+AZURE_STORAGE_CONNECTION_STRING=...
+RAW_CONTAINER=aeroops-raw
+PROCESSED_CONTAINER=aeroops-processed
+RAW_PREFIX=
+PROCESSED_PREFIX=
+```
+
+Current ingestion scripts using storage abstraction:
+
+- `scripts/process_raw_data.py`
+- `scripts/load_airports.py`
+- `scripts/load_flights.py`

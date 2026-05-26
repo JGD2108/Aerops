@@ -341,6 +341,17 @@ AZURE_PIPELINE_TRIGGER_URL
 AZURE_PIPELINE_TRIGGER_TOKEN
 ```
 
+Storage backend configuration:
+
+```text
+STORAGE_BACKEND=local|azure_blob
+AZURE_STORAGE_CONNECTION_STRING
+RAW_CONTAINER
+PROCESSED_CONTAINER
+RAW_PREFIX
+PROCESSED_PREFIX
+```
+
 ## Kubernetes Deployment
 
 The project includes Kubernetes manifests under:
