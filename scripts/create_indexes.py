@@ -5,8 +5,29 @@ from pymongo import ASCENDING, DESCENDING
 from app.database import db
 
 
+def _remove_duplicates_by_field(collection, field_name):
+    pipeline = [
+        {"$match": {field_name: {"$nin": [None, ""]}}},
+        {"$group": {"_id": f"${field_name}", "ids": {"$push": "$_id"}, "count": {"$sum": 1}}},
+        {"$match": {"count": {"$gt": 1}}},
+    ]
+    duplicates = list(collection.aggregate(pipeline, allowDiskUse=True))
+    removed = 0
+    for doc in duplicates:
+        ids = doc.get("ids", [])
+        if len(ids) > 1:
+            delete_ids = ids[1:]
+            result = collection.delete_many({"_id": {"$in": delete_ids}})
+            removed += result.deleted_count
+    return removed
+
+
 def create_indexes():
     started_at = datetime.utcnow()
+
+    # Ensure unique index creation is idempotent in Cosmos/Mongo across reruns.
+    _remove_duplicates_by_field(db.flights, "flight_id")
+    _remove_duplicates_by_field(db.ops_metrics_snapshots, "snapshot_id")
 
     # flights indexes
     db.flights.create_index([("flight_id", ASCENDING)], unique=True)
